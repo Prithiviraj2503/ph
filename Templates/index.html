@@ -1,1 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Road Pathhole Detection</title>
+	<script src="{{ url_for('static', filename = 'jquery.js') }}"></script>
+	<style type="text/css">
+		header{
+			width: 100%;
+			background: #f1cf12;
+			text-align: center;
+			padding-top: 2px;
+		}
+		header h1{
+			color: black;
+		}
+		.file-container{
+			position: absolute;
+			top: 40%;
+			left: 40%;
+			transform: translate(-50%; -50%);
+			padding: 35px;
+			background: #00000096;
+			border-radius: 3px;
+		}
+		body{
+			background-image: url("{{ url_for('static', filename = 'background.jpg') }}");
+			background-repeat: no-repeat;
+			background-size: cover;
+		}
+		label{
+			color: white;
+			font-weight: bold;
+			margin-bottom: 5px;
+		}
+		input{
+			margin-top: 10px;
+			border:3px solid yellow;
+			padding:3px;
+		}
+		#submitbtn{
+			background: green;
+			border-radius: 3px;
+			color: white;
+			border:none;
+			outline: none;
+			margin-top: 15px;
+			padding: 5px;
+			width: 100%;
+			cursor: pointer;
+		}
+		.videofield{
+			position: absolute;
+			top: 25%;
+			left: 21%;
+			transform: translate(-50%; -50%);
+		}
 
+		.loader {
+			position: absolute;
+			top: 40%;
+			left: 46%;
+			transform: translate(-50%; -50%);
+			border: 16px solid #f3f3f3;
+			border-radius: 50%;
+			border-top: 16px solid #0679c5;
+			width: 120px;
+			height: 120px;
+			animation: spin 2s linear infinite;
+			z-index: 1;
+		}
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+		.hide{
+			display: none;
+		}
+		.blur{
+			opacity: 0.5;
+		}
+		.notif{
+			position: absolute;
+			top: 65%;
+			left: 44%;
+			transform: translate(-50%; -50%);
+			font-weight: bold;
+			text-align: center;
+			color: red;
+		}
+		/* The Modal (background) */
+		.modal {
+		  display: none; /* Hidden by default */
+		  position: fixed; /* Stay in place */
+		  z-index: 1; /* Sit on top */
+		  padding-top: 100px; /* Location of the box */
+		  left: 0;
+		  top: 0;
+		  width: 100%; /* Full width */
+		  height: 100%; /* Full height */
+		  overflow: auto; /* Enable scroll if needed */
+		  background-color: rgb(0,0,0); /* Fallback color */
+		  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+		}
+
+		/* Modal Content */
+		.modal-content {
+		  background-color: #fefefe;
+		  margin: auto;
+		  padding: 20px;
+		  border: 1px solid #888;
+		  width: 80%;
+		}
+
+		/* The Close Button */
+		.close {
+		  color: #aaaaaa;
+		  float: right;
+		  font-size: 28px;
+		  font-weight: bold;
+		}
+
+		.close:hover,
+		.close:focus {
+		  color: #000;
+		  text-decoration: none;
+		  cursor: pointer;
+		}
+	</style>
+</head>
+<div id="body">
+	<header>
+		<h1>Road Pathhole Detection</h1>
+	</header>
+		<div class="file-container">
+			<label for="carvideo">Input Your Video File</label><br>
+			<input type="file" name="carvideo" id="carvideo"><br>
+			<button type="button" id="submitbtn">Start Driving!</button><br>
+		</div>
+
+	<button id="myBtn" style="display: none"></button>
+	<div id="myModal" class="modal">
+	  <div class="modal-content">
+	    <span class="close">&times;</span>
+	    <center>
+	    	<label style="font-weight: bold;" id="ded"></label><br><br>
+	    	<img id='detectedimage' / height="350" width="450">
+	    </center>
+	  </div>
+
+	</div>
+</div>
+<div class="loader hide"></div>
+<div class="notif hide">Detection InProgress. Please Wait..</div>
+<script type="text/javascript">
+	$("#submitbtn").click(function(){
+		if ($('#carvideo')[0].files.length != 0){
+			var filename = $('#carvideo').val().split('\\').pop();
+			if (filename.includes('.jpg') || filename.includes('.png')){
+				var type = 'image'
+			}else{
+				var type = 'video'
+			}
+			$.ajax({
+				url:"/detect", 
+				type: "post", 
+				dataType: 'json',
+				data: {"filename":filename, 'type':type},
+				beforeSend: function(){
+			        $("#submitbtn").attr("disabled", "true");
+			        $("#body").addClass("blur");
+			        $(".loader").show();
+			        $(".notif").show();
+			    },
+			    success: function(output) {
+			       	$("#submitbtn").removeAttr("disabled");
+			        $("#body").removeClass("blur");
+			        $(".loader").hide();
+			        $(".notif").hide();
+			        $("#carvideo").val(null);
+			        if (output["prediction"] == 1){
+			        	$("#ded").text("Pathhole Found")
+			        	$("#ded").css("color", "red")
+			        }else{
+			        	$("#ded").text("Pathhole Not Found")
+			        	$("#ded").css("color", "green")
+			        }
+			        if (type == 'image'){
+			        	var imagesrc = 'http://localhost:5000/static/output/detected'+filename
+			        	$("#detectedimage").attr("src",imagesrc)
+			        	$("#myBtn").click()
+			        }else{
+			        	alert("Your File available in the static folder!'" + output.outputfile + "'")
+			        }
+			       
+			    },
+			    error: function() { 
+			        alert("Error occured.please try again");
+			        $("#submitbtn").removeAttr("disabled");
+			        $("#body").removeClass("blur");
+			        $(".loader").hide();
+			        $(".notif").hide();
+			        $("#carvideo").val(null);
+			    },
+			    complete:function(){
+			    	
+			    }
+			});
+		}else{
+			alert("Please Select Any Video File!")
+		}
+	});
+
+	var modal = document.getElementById("myModal");
+	var btn = document.getElementById("myBtn");
+	var span = document.getElementsByClassName("close")[0];
+	btn.onclick = function() {
+	  modal.style.display = "block";
+	}
+	span.onclick = function() {
+	  modal.style.display = "none";
+	}
+	window.onclick = function(event) {
+	  if (event.target == modal) {
+	    modal.style.display = "none";
+	  }
+	}
+</script>
+</html>
